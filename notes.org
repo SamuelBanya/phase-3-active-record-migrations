@@ -1,0 +1,225 @@
+NOTE: I ran this command to create the migration to setup the 'artists' table:
+#+begin_src bash
+bundle exec rake db:create_migration NAME=create_artists
+#+end_src
+
+Related output:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:create_migration NAME=create_artists
+
+db/migrate/20220901204031_create_artists.rb
+#+end_src
+
+The above command also created a 'db/migrate/.gitkeep' file which can be deleted, since its only purpose is to creating folders with no content so that you can keep them in your Git repo
+
+Notes on differences between 'change', 'up' and 'down' methods for Active Record Migration methods:
+- "change": this is the primary method that updates the database
+- "up" --> (aka "do"): this method defines the code to execute when the migration is run
+- "down" --> (aka "undo"): this method defines the code to execute when the migration is rolled back
+
+This is a list of Active Record migrations methods we can use:
+- https://guides.rubyonrails.org/active_record_migrations.html#writing-a-migration
+
+I then ran this command to run the migration process:
+#+begin_src bash
+bundle exec rake db:migrate
+#+end_src
+
+Related output:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate
+== 20220901204031 CreateArtists: migrating ====================================
+-- create_table(:artists)
+   -> 0.0011s
+== 20220901204031 CreateArtists: migrated (0.0012s) ===========================
+#+end_src
+
+What that command does:
+- Active Record creates the new database file
+- It then uses the code in the 'db/migrate' folder to update the database
+- It then creates the 'db/schema.rb' file which contains the snapshot of the database
+
+I then used this command to check the status of the migration:
+#+begin_src bash
+bundle exec rake db:migrate:status
+#+end_src
+
+Related output:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate:status
+
+database: db/development.sqlite3
+
+ Status   Migration ID    Migration Name
+--------------------------------------------------
+   up     20220901204031  Create artists
+#+end_src
+
+NOTE:
+- If the status is 'up', the migration is 'active' and the migration updated the database successfully
+
+I then used the 'console' Rake task accordingly along with some 'Active Record' specific methods that the 'Artist' class inherited from the 'ActiveRecord::Base' class:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake console
+[1] pry(main)> Artist
+=> Artist (call 'Artist.connection' to establish a connection)
+
+[2] pry(main)> Artist.column_names
+D, [2022-09-01T17:09:58.449475 #8725] DEBUG -- :    (1.0ms)  SELECT sqlite_version(*)
+=> ["id", "name", "age", "genre", "hometown"]
+#+end_src
+
+I then instantiated a new 'Artist' named 'Jon', set his age to 30, and saved him to the database:
+#+begin_src ruby
+[3] pry(main)> a = Artist.new(name: "Jon")
+=> #<Artist:0x00007fd613765548 id: nil, name: "Jon", age: nil, genre: nil, hometown: nil>
+
+[4] pry(main)> a.age = 30
+=> 30
+
+[5] pry(main)> a.save()
+D, [2022-09-01T17:11:34.977328 #8725] DEBUG -- :   TRANSACTION (0.1ms)  begin transaction
+D, [2022-09-01T17:11:34.978394 #8725] DEBUG -- :   Artist Create (0.8ms)  INSERT INTO "artists" ("name", "age") VALUES (?, ?)  [["name", "Jon"], ["age", "30"]]
+D, [2022-09-01T17:11:34.980878 #8725] DEBUG -- :   TRANSACTION (2.1ms)  commit transaction
+=> true
+#+end_src
+
+This is an example of creating a new 'Artist' with the '.create()' method:
+#+begin_src ruby
+[6] pry(main)> Artist.create(name: "Kelly")
+D, [2022-09-01T17:12:53.008603 #8725] DEBUG -- :   TRANSACTION (0.1ms)  begin transaction
+D, [2022-09-01T17:12:53.009609 #8725] DEBUG -- :   Artist Create (0.8ms)  INSERT INTO "artists" ("name") VALUES (?)  [["name", "Kelly"]]
+D, [2022-09-01T17:12:53.011899 #8725] DEBUG -- :   TRANSACTION (1.9ms)  commit transaction
+=> #<Artist:0x00007fd6135ece78 id: 2, name: "Kelly", age: nil, genre: nil, hometown: nil>
+#+end_src
+
+I then used the '.all()' method to return all of the Artists from the database:
+#+begin_src ruby
+[7] pry(main)> Artist.all()
+D, [2022-09-01T17:13:35.124517 #8725] DEBUG -- :   Artist Load (0.4ms)  SELECT "artists".* FROM "artists"
+=> [#<Artist:0x00007fd6102736a0 id: 1, name: "Jon", age: "30", genre: nil, hometown: nil>,
+ #<Artist:0x00007fd610273448 id: 2, name: "Kelly", age: nil, genre: nil, hometown: nil>]
+#+end_src
+
+I then used the '.find_by()' method to search for an artist by their name:
+#+begin_src ruby
+[8] pry(main)> Artist.find_by(name: "Jon")
+D, [2022-09-01T17:14:12.239334 #8725] DEBUG -- :   Artist Load (0.3ms)  SELECT "artists".* FROM "artists" WHERE "artists"."name" = ? LIMIT ?  [["name", "Jon"], ["LIMIT", 1]]
+=> #<Artist:0x00007fd61356cf70 id: 1, name: "Jon", age: "30", genre: nil, hometown: nil>
+#+end_src
+
+I then had to create a 'favorite_food' column for the 'Artists' table by using this new migration:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:create_migration NAME=add_favorite_food_to_artists
+
+db/migrate/20220901211758_add_favorite_food_to_artists.rb
+#+end_src
+
+I then made the following change to the 'db/migrate/20220901211758_add_favorite_food_to_artists.rb' file:
+#+begin_src ruby
+class AddFavoriteFoodToArtists < ActiveRecord::Migration[6.1]
+  def change
+    add_column :artists, :favorite_food, :string
+  end
+end
+#+end_src
+
+I then ran the migration with this command in the root of the project's directory:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate
+== 20220901211758 AddFavoriteFoodToArtists: migrating =========================
+-- add_column(:artists, :favorite_food, :string)
+   -> 0.0011s
+== 20220901211758 AddFavoriteFoodToArtists: migrated (0.0012s) ================
+#+end_src
+
+I then checked the status with the 'bundle exec rake db:migrate:status' command:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate:status
+
+database: db/development.sqlite3
+
+ Status   Migration ID    Migration Name
+--------------------------------------------------
+   up     20220901204031  Create artists
+   up     20220901211758  Add favorite food to artists
+#+end_src
+
+This action then updated the 'db/schema.rb' with the new 'favorite_food' column accordingly.
+
+I then used the 'bundle exec rake console' command accordingly along with the '.column_names()' method to check that column names were updated accordingly:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake console
+[1] pry(main)> Artist.column_names()
+
+D, [2022-09-01T17:24:08.391803 #8975] DEBUG -- :    (0.9ms)  SELECT sqlite_version(*)
+=> ["id", "name", "age", "genre", "hometown", "favorite_food"]
+#+end_src
+
+I then used the 'bundle exec rake db:rollback' command to roll back to a previous change to change it to 'favorite_flower' instead of 'favorite_food':
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:rollback
+
+== 20220901211758 AddFavoriteFoodToArtists: reverting =========================
+-- remove_column(:artists, :favorite_food, :string)
+   -> 0.0034s
+== 20220901211758 AddFavoriteFoodToArtists: reverted (0.0065s) ================
+#+end_src
+
+I then checked the status of the migration with the 'bundle exec rake db:migrate:status' command:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate:status
+
+database: db/development.sqlite3
+
+ Status   Migration ID    Migration Name
+--------------------------------------------------
+   up     20220901204031  Create artists
+  down    20220901211758  Add favorite food to artists
+#+end_src
+
+The fact that the 'Add favorite food to artists' migration is set to 'down' means that it's not part of the database, which was reflected in the schema of the database as well.
+
+This means that if the status is 'down', we can then edit the migration so that the column name is corrected accordingly, and also so that we can make corrections to the filename and class name.
+
+I then changed the name of the file to '/db/migrate/20220901211758_add_favorite_flower_to_artists.rb'
+
+I then changed its contents to be:
+#+begin_src ruby
+class AddFavoriteFlowerToArtists < ActiveRecord::Migration[6.1]
+  def change
+    add_column :artists, :favorite_flower, :string
+  end
+end
+#+end_src
+
+I then re-ran the 'bundle exec rake db:migrate' command:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate
+
+== 20220901211758 AddFavoriteFlowerToArtists: migrating =======================
+-- add_column(:artists, :favorite_flower, :string)
+   -> 0.0012s
+== 20220901211758 AddFavoriteFlowerToArtists: migrated (0.0012s) ==============
+#+end_src
+
+I then checked the status with the 'bundle exec rake db:migrate:status' command:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:migrate:status
+
+database: db/development.sqlite3
+
+ Status   Migration ID    Migration Name
+--------------------------------------------------
+   up     20220901204031  Create artists
+   up     20220901211758  Add favorite flower to artists
+#+end_src
+
+NOTE: I was stuck on the last portion of this lab since I mistakeningly forgot to use an 'integer' for the 't.integer :age' section.
+
+With this in mind, I had to use the 'bundle exec rake db:rollback' command a few times to rollback my changes so that the status of the migrations were in 'down' status so that I can edit them accordingly.
+
+Even after doing this, and re-using the 'bundle exec rake db:migrate' command, I realized that maybe the schema wasn't being updated accordingly, so I used the 'bundle exec rake db:schema:load' command to reload the schema which fixed the 'learn test' issue:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-migrations $ bundle exec rake db:schema:load
+#+end_src
